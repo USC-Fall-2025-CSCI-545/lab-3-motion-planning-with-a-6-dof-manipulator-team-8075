@@ -1,4 +1,10 @@
-#!/usr/bin/env python
+# !/usr/bin/env python
+
+'''
+CSCI 545
+2025 Fall
+Team 8075
+'''
 
 import argparse
 import time
@@ -104,11 +110,21 @@ class AdaRRT():
         :returns: A list of states that create a path from start to
             goal on success. On failure, returns None.
         """
+
+
         for k in range(self.max_iter):
             # FILL in your code here
+            sample_point = self._get_random_sample()
+            nearest_neighbor = self._get_nearest_neighbor(sample_point)
+            new_node = self._extend_sample(sample_point, nearest_neighbor)
+
+            # didn't find one; try again
+            if new_node is None:
+                continue
 
             if new_node and self._check_for_completion(new_node):
                 # FILL in your code here
+                path = self._trace_path_from_start(new_node)
 
                 return path
 
@@ -123,6 +139,10 @@ class AdaRRT():
             space.
         """
         # FILL in your code here
+        random_config = np.random.rand(self.joint_lower_limits.size)
+        # remap
+        sample = self.joint_lower_limits + random_config * (self.joint_upper_limits - self.joint_lower_limits)
+        return sample
 
     def _get_nearest_neighbor(self, sample):
         """
@@ -133,6 +153,16 @@ class AdaRRT():
         :returns: A Node object for the closest neighbor.
         """
         # FILL in your code here
+        node_best = None
+        dist_best = np.inf
+        
+        # find the node with shortest distance
+        for node in self.start:
+            dist_current = np.linalg.norm(sample - node.state)
+            if dist_current < dist_best:
+                dist_best = dist_current
+                node_best = node
+        return node_best
 
     def _extend_sample(self, sample, neighbor):
         """
@@ -146,6 +176,27 @@ class AdaRRT():
         :returns: The new Node object. On failure (collision), returns None.
         """
         # FILL in your code here
+        # calc distance
+        direction = np.asarray(sample, dtype=float) - np.asarray(neighbor.state, dtype=float)
+        distance = np.linalg.norm(direction)
+        if distance == 0:
+            return None
+
+        # calc proposed vector 
+        step = self.step_size * direction / distance
+        proposal = neighbor.state + step
+        proposal = np.minimum(np.maximum(proposal, self.joint_lower_limits), self.joint_upper_limits)
+
+        # check for collision
+        num_checks = max(2, int(np.ceil(np.linalg.norm(proposal - neighbor.state) / (self.step_size / 2.0))))
+        for i in range(1, num_checks + 1):
+            alpha = float(i) / float(num_checks)
+            q = neighbor.state + alpha * (proposal - neighbor.state)
+            if self._check_for_collision(q):
+                return None
+
+        # add to tree
+        return neighbor.add_child(proposal)
 
     def _check_for_completion(self, node):
         """
@@ -155,6 +206,7 @@ class AdaRRT():
         :returns: Boolean indicating node is close enough for completion.
         """
         # FILL in your code here
+        return np.linalg.norm(np.asarray(node.state) - np.asarray(self.goal.state)) <= float(self.goal_precision)
 
     def _trace_path_from_start(self, node=None):
         """
@@ -166,6 +218,17 @@ class AdaRRT():
             ending at the goal state.
         """
         # FILL in your code here
+        # default
+        if node is None:
+            node = self.goal
+
+        states = []
+        node_curr = node
+        while node_curr is not None:
+            states.append(np.asarray(node_curr.state, dtype=float))
+            node_curr = node_curr.parent
+        states.reverse()
+        return states
 
     def _check_for_collision(self, sample):
         """
