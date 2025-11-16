@@ -326,13 +326,13 @@ def main(is_sim):
         for i, waypoint in enumerate(path):
             waypoints.append((0.0 + i, waypoint))
 
-        t0 = time.perf_counter()
+        t0 = time.clock()
         traj = ada.compute_smooth_joint_space_path(
             ada.get_arm_state_space(), waypoints)
-        t = time.perf_counter() - t0
+        t = time.clock() - t0
         print(str(t) + " seconds elapsed")
 
-        input('Press ENTER to execute trajectory and exit')
+        # input("Press ENTER to execute trajectory and exit")
         ada.execute_trajectory(traj)
         rospy.sleep(1.0)
 
