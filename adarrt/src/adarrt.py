@@ -114,7 +114,10 @@ class AdaRRT():
 
         for k in range(self.max_iter):
             # FILL in your code here
-            sample_point = self._get_random_sample()
+            if np.random.rand() < 0.2:
+                sample_point = self.get_random_sample_near_goal()
+            else:
+                sample_point = self._get_random_sample()
             nearest_neighbor = self._get_nearest_neighbor(sample_point)
             new_node = self._extend_sample(sample_point, nearest_neighbor)
 
@@ -143,6 +146,21 @@ class AdaRRT():
         # remap
         sample = self.joint_lower_limits + random_config * (self.joint_upper_limits - self.joint_lower_limits)
         return sample
+        
+    def get_random_sample_near_goal(self):
+        """
+        Samples a point near the goal: each joint within +/- 0.05 of goal,
+        clamped to joint limits.
+        """
+        goal = np.asarray(self.goal.state, dtype=float)
+        # uniform in [-0.05, 0.05] for each joint
+        noise = (np.random.rand(goal.size) - 0.5) * 0.1
+        sample = goal + noise
+        # respect joint limits
+        sample = np.minimum(np.maximum(sample, self.joint_lower_limits),
+                            self.joint_upper_limits)
+        return sample
+
 
     def _get_nearest_neighbor(self, sample):
         """
@@ -255,12 +273,12 @@ def main(is_sim):
     armHome = [-1.5, 3.22, 1.23, -2.19, 1.8, 1.2]
     goalConfig = [-1.72, 4.44, 2.02, -2.04, 2.66, 1.39]
     delta = 0.25
-    eps = 1.0
+    eps = .2
 
     if is_sim:
         ada.set_positions(goalConfig)
     else:
-        raw_input("Please move arm to home position with the joystick. " +
+        input("Please move arm to home position with the joystick. " +
             "Press ENTER to continue...")
 
 
@@ -308,12 +326,13 @@ def main(is_sim):
         for i, waypoint in enumerate(path):
             waypoints.append((0.0 + i, waypoint))
 
-        t0 = time.clock()
-        traj = ada.compute_joint_space_path(
+        t0 = time.perf_counter()
+        traj = ada.compute_smooth_joint_space_path(
             ada.get_arm_state_space(), waypoints)
-        t = time.clock() - t0
-        print(str(t) + "seconds elapsed")
-        raw_input('Press ENTER to execute trajectory and exit')
+        t = time.perf_counter() - t0
+        print(str(t) + " seconds elapsed")
+
+        input('Press ENTER to execute trajectory and exit')
         ada.execute_trajectory(traj)
         rospy.sleep(1.0)
 
