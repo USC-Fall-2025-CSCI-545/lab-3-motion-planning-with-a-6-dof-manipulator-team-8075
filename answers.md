@@ -1,4 +1,4 @@
-Will make this a pdf after its done:
+will add in overleaf after in person
 
 Q5 Observations:
 
