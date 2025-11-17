@@ -278,7 +278,7 @@ def main(is_sim):
     if is_sim:
         ada.set_positions(goalConfig)
     else:
-        input("Please move arm to home position with the joystick. " +
+        raw_input("Please move arm to home position with the joystick. " +
             "Press ENTER to continue...")
 
 
@@ -332,7 +332,7 @@ def main(is_sim):
         t = time.clock() - t0
         print(str(t) + " seconds elapsed")
 
-        # input("Press ENTER to execute trajectory and exit")
+        raw_input("Press ENTER to execute trajectory and exit")
         ada.execute_trajectory(traj)
         rospy.sleep(1.0)
 
